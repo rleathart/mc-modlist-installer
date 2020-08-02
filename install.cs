@@ -15,13 +15,13 @@ class Program {
 
     if (Directory.Exists(exeDir))
     {
-      if (Regex.Match(exeFileName, @"(install|mono)").Success)
+      if (Regex.Match(exeFileName, @"install").Success)
       {
         Directory.SetCurrentDirectory(exeDir);
       }
-      else
+      else if (!Regex.Match(exeFileName, @"mono").Success)
       {
-        Console.WriteLine("Warning: {0} does not look like '(install|mono)', the installer is not guarenteed to run in the correct directory. Did you rename the installer?",
+        Console.WriteLine("Warning: {0} does not look like 'install', the installer is not guarenteed to run in the correct directory. Did you rename the installer?",
             exeFileName);
       }
     }
