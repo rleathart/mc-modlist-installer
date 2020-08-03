@@ -91,6 +91,8 @@ class Program {
 
   private static void ResolveUrl(string line, string dir, bool alwaysFetch = false)
   {
+    if (line.Length == 0) return;
+
     bool isServer = Directory.EnumerateFiles(".","*server*").Any();
 
     string url = Regex.Replace(line," #.*","");
