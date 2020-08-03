@@ -194,6 +194,8 @@ class Program {
       CultureInfo ci = new CultureInfo("en-GB");
 
       // We want to re-encode filenames
+      // NOTE: This may need to change if some mod urls contain unconventional
+      //       characters.
       filename = Regex.Replace(local_filename, @" ", @"%20");
       filename = Regex.Replace(filename, @"\+", @"%2B");
 
