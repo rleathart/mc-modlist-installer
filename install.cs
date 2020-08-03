@@ -19,6 +19,7 @@ class Program {
   {
     if (!File.ReadLines(remotesList).Any())
     {
+      // Don't do anything if remotesList is empty
       Console.WriteLine("{0} is empty!",remotesList);
       return;
     }
@@ -26,7 +27,7 @@ class Program {
     Console.WriteLine("Fetching remote files ...");
     foreach (string line in File.ReadLines(remotesList))
     {
-      if (line != "")
+      if (line.Length != 0) // Don't resolve empty lines
         ResolveUrl(line,".", alwaysFetch: true);
     }
   }
@@ -50,17 +51,21 @@ class Program {
       Console.Write("Warning: Could not cd to directory '{0}', the installer may not run correctly.", exeDir);
     }
 
-    string remotesList = ".install.remote";
     // List of files to be fetched (say, a modlist) stored in '.install.remote'
+    string remotesList = ".install.remote";
     if (File.Exists(remotesList)) FetchRemoteList(remotesList);
 
+    // List of all files matching *.modlist in base directory
     List<string> modlists = new List<string>(Directory.EnumerateFiles(".","*.modlist"));
     if (!modlists.Any())
     {
       Console.WriteLine("No modlists found.");
+
+      // Ask user for remote URL (holding the raw content for a .install.remote)
+      // if there are no modlists
       Console.Write("Please specify a remote: ");
       string resp = Console.ReadLine();
-      if (resp != "")
+      if (resp != "") // If the user gives a URL, download it, otherwise do nothing
       {
         WebClient client = new WebClient();
         client.DownloadFile(resp, remotesList);
@@ -80,6 +85,10 @@ class Program {
   }
 
   private static void DownloadFile(string url, string dir = ".") {
+    /*
+     * Downloads a URL with an automatically determined filename
+     * to a given directory ('.' by default).
+     */
     var uri = new Uri(url);
     string filename = Path.GetFileName(uri.LocalPath);
 
@@ -91,6 +100,12 @@ class Program {
 
   private static void ResolveUrl(string line, string dir, bool alwaysFetch = false)
   {
+    /*
+     * Resolves a url in a modlist such that client/server only mods
+     * are only downloaded/present in their respective environments.
+     * URLs will be skipped if already downloaded by default by this can be
+     * overridden by the alwaysFetch argument.
+     */
     if (line.Length == 0) return;
 
     bool isServer = Directory.EnumerateFiles(".","*server*").Any();
@@ -107,6 +122,7 @@ class Program {
       clientMod = false;
     }
 
+    // If mod is client only and the current instance is a server, remove it.
     if (clientMod == true & isServer) {
       if (File.Exists(Path.Combine(dir,filename))) {
         Console.WriteLine($"Removing client only mod: {filename}");
@@ -114,6 +130,7 @@ class Program {
       }
       return;
     }
+    // If mod is server only and the current instance is a client, remove it.
     else if (clientMod == false & !isServer) {
       if (File.Exists(Path.Combine(dir,filename))) {
         Console.WriteLine($"Removing server only mod: {filename}");
@@ -129,9 +146,6 @@ class Program {
     else if (File.Exists(Path.Combine(dir,filename))) {
       Console.WriteLine("[{0}] Skipping existing file: {1}",dir, filename);
     }
-    else if (File.Exists(Path.Combine("Flan",filename))) {
-      Console.WriteLine("[{0}] Skipping existing file: {1}",dir, filename);
-    }
     else {
       Console.WriteLine("[{0}] Downloading {1} ...",dir, filename);
       DownloadFile(url, dir);
@@ -140,16 +154,13 @@ class Program {
 
   private static void ResolveModlist(string list) {
     // Download files in modlist
-    System.IO.StreamReader modlist = new System.IO.StreamReader(list);
-    string line;
-    string dir;
-    bool alwaysFetch = false;
-    dir = "mods";
+    string dir = "mods"; // If no directory given, download to "mods".
+    bool alwaysFetch = false; // Skip existing files by default
     List<string> modlists = new List<string>(Directory.EnumerateFiles(".","*.modlist"));
     List<string> mod_dirs = new List<String>();
     List<string> mods = new List<string>();
 
-    while((line = modlist.ReadLine()) != null)
+    foreach (string line in File.ReadLines(list))
     {
       if (Regex.Match(line,@"^#[^#]+").Success)
       {
@@ -167,14 +178,12 @@ class Program {
 
       Directory.CreateDirectory(dir);
       ResolveUrl(line,dir,alwaysFetch);
-
     }
 
     foreach (string mod_dir in mod_dirs)
     {
       mods.AddRange(Directory.GetFiles(mod_dir,"*",SearchOption.TopDirectoryOnly).ToList());
     }
-
 
     foreach (string i in mods) // Remove local mods not in a modlist.
     {
@@ -210,6 +219,5 @@ class Program {
         }
       }
     }
-    modlist.Close();
   }
 }
