@@ -55,8 +55,9 @@ class Program {
     string remotesList = ".install.remote";
     if (File.Exists(remotesList)) FetchRemoteList(remotesList);
 
-    // List of all files matching *.modlist in base directory
-    List<string> modlists = new List<string>(Directory.EnumerateFiles(".","*.modlist"));
+    // List of all files matching *.modlist in base directory, sorted by name
+    List<string> modlists = new List<string>(Directory.EnumerateFiles(".","*.modlist")
+        .OrderBy(f => f));
     if (!modlists.Any())
     {
       Console.WriteLine("No modlists found.");
@@ -73,6 +74,10 @@ class Program {
         FetchRemoteList(remotesList);
       }
     }
+    // Regenerate modlists list, files might have changed since fetching
+    // remotesList
+    modlists = new List<string>(Directory.EnumerateFiles(".","*.modlist")
+        .OrderBy(f => f));
 
     foreach (string list in modlists)
     {
