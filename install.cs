@@ -9,11 +9,13 @@ using System.Threading;
 using System.Globalization;
 
 class Program {
-  private static void ExitHandler()
+  private static void ExitHandler(int retVal = 0, string sayThis = "")
   {
+    if (sayThis.Length != 0) Console.Write(sayThis);
     Console.Write("Press any key to exit...");
     Console.ReadKey();
-    System.Environment.Exit(1);
+    Console.WriteLine();
+    System.Environment.Exit(retVal);
   }
   private static void FetchRemoteList(string remotesList)
   {
@@ -85,8 +87,7 @@ class Program {
       ResolveModlist(list);
     }
 
-    Console.Write("Done, press any key to exit...");
-    Console.ReadKey();
+    ExitHandler(sayThis: "Done! ");
   }
 
   private static void DownloadFile(string url, string dir = ".") {
