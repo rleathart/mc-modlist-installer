@@ -6,7 +6,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Globalization;
 
 class Program {
   private static void ExitHandler(int retVal = 0, string sayThis = "")
@@ -32,6 +31,15 @@ class Program {
       if (line.Length != 0) // Don't resolve empty lines
         ResolveUrl(line,".", alwaysFetch: true);
     }
+  }
+  private static MatchCollection ExtractFromDelims(string text, string delims)
+  {
+    if (delims == "[]") return Regex.Matches(text, @"(?<=\[)([^]]*)(?=\])");
+    if (delims == "()") return Regex.Matches(text, @"(?<=\()([^)]*)(?=\))");
+    if (delims == "{}") return Regex.Matches(text, @"(?<=\{)([^}]*)(?=\})");
+
+    return Regex.Matches(text,
+        @"(?<=" + delims[0] + @")([^" + delims[1] + @"]*)(?=" + delims[1] + @")");
   }
   public static void Main(string[] args)
   {
@@ -104,29 +112,26 @@ class Program {
     while (client.IsBusy) { Thread.Sleep(100); }
   }
 
-  private static void ResolveUrl(string line, string dir, bool alwaysFetch = false)
+  private static void ResolveUrl(string line, string dir,
+      bool alwaysFetch = false, bool? clientMod = null)
   {
     /*
      * Resolves a url in a modlist such that client/server only mods
      * are only downloaded/present in their respective environments.
-     * URLs will be skipped if already downloaded by default by this can be
+     * URLs will be skipped if already downloaded by default but this can be
      * overridden by the alwaysFetch argument.
      */
-    if (line.Length == 0) return;
+    if (Regex.Match(line, @"^[\s]*$").Success) return; // Skip empty lines
 
+    // Do any files match *server*?
     bool isServer = Directory.EnumerateFiles(".","*server*").Any();
 
-    string url = Regex.Replace(line," #.*","");
+    //  Ignore comments in URLs only if they are preceeded by whitespace,
+    //  that is, not part of the URL.
+
+    string url = Regex.Replace(line, @"[\s]+#.*","");
     var uri = new Uri(url);
     string filename = Path.GetFileName(uri.LocalPath);
-    bool? clientMod = null;
-
-    if (Regex.Match(line," #Client only").Success) {
-      clientMod = true;
-    }
-    else if (Regex.Match(line, " #Server only").Success) {
-      clientMod = false;
-    }
 
     // If mod is client only and the current instance is a server, remove it.
     if (clientMod == true & isServer) {
@@ -162,28 +167,59 @@ class Program {
     // Download files in modlist
     string dir = "mods"; // If no directory given, download to "mods".
     bool alwaysFetch = false; // Skip existing files by default
+    bool? clientMod = null; // All files are common by default
     List<string> modlists = new List<string>(Directory.EnumerateFiles(".","*.modlist"));
     List<string> mod_dirs = new List<String>();
     List<string> mods = new List<string>();
 
-    foreach (string line in File.ReadLines(list))
+    foreach (string inputLine in File.ReadLines(list))
     {
-      if (Regex.Match(line,@"^#[^#]+").Success)
+      string line = inputLine;
+      // Skip lines containing only whitespace
+      if (Regex.Match(line, @"^[\s]*$").Success) continue;
+
+      // Trim leading whitespace
+      line = Regex.Replace(line, @"^[\s]*(?=[^\s])","");
+
+      bool isUrl = line.StartsWith("http");
+      if (!isUrl)
       {
-        dir = Regex.Replace(line,@"^#", "");
-        alwaysFetch = false; // Reset alwaysFetch on new directory
-        continue;
-      }
-      if (Regex.Match(line,@"^##alwaysFetch").Success)
-      {
-        alwaysFetch = true;
+        line = Regex.Replace(inputLine, @"#.*", @""); // ignore comments
+
+        // Skip this line if is is not a valid control directive. That is,
+        // it doesn't contain anything inside square or angle brackets.
+        if (!Regex.Match(line, @"[\s]*(\[[^]]+\]|<[^>]+>)").Success) continue;
+
+        if (ExtractFromDelims(line,"[]").Count > 0)
+        {
+          // Do this for every directory specification.
+          alwaysFetch = false;
+          clientMod = null;
+        }
+
+        var delimContent = ExtractFromDelims(line, "[]");
+        if (delimContent.Count > 0 && delimContent[0].ToString().Length != 0)
+          dir = delimContent[0].ToString();
+
+        if (ExtractFromDelims(line, "<>").Any(x =>
+              x.ToString().ToLower() == "always-fetch")) alwaysFetch = true;
+        if (ExtractFromDelims(line, "<>").Any(x =>
+              x.ToString().ToLower() == "smart-fetch")) alwaysFetch = false;
+
+        if (ExtractFromDelims(line, "<>").Any(x =>
+              x.ToString().ToLower() == "server-only")) clientMod = false;
+        if (ExtractFromDelims(line, "<>").Any(x =>
+              x.ToString().ToLower() == "client-only")) clientMod = true;
+        if (ExtractFromDelims(line, "<>").Any(x =>
+              x.ToString().ToLower() == "common")) clientMod = null;
+
         continue;
       }
 
       if (!mod_dirs.Contains(dir)) mod_dirs.Add(dir);
 
       Directory.CreateDirectory(dir);
-      ResolveUrl(line,dir,alwaysFetch);
+      ResolveUrl(line,dir,alwaysFetch,clientMod);
     }
 
     foreach (string mod_dir in mod_dirs)
@@ -197,16 +233,17 @@ class Program {
       string local_filename = Path.GetFileName(i);
       string local_dir = Path.GetDirectoryName(i);
 
-      CultureInfo ci = new CultureInfo("en-GB");
-
       // We want to re-encode filenames
       // NOTE: This may need to change if some mod urls contain unconventional
       //       characters.
       filename = Regex.Replace(local_filename, @" ", @"%20");
       filename = Regex.Replace(filename, @"\+", @"%2B");
+      filename = Regex.Replace(filename, @"#", @"%23");
+      filename = Regex.Replace(filename, @":", @"%3A");
+      filename = Regex.Replace(filename, @";", @"%3B");
 
       // Skip configs, old ones are harmless.
-      if (filename.EndsWith("cfg", true, ci)) continue;
+      if (filename.EndsWith("cfg", true, null)) continue;
 
       if (!modlists.Any(x => x != null &&
             File.ReadAllText(x).Contains(filename))) {
