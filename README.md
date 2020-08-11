@@ -23,6 +23,14 @@ For reference, after running the installer your directory structure will look li
 └── mods/
 ```
 
+On macOS and Linux, you will have to set execute permissions for the file before
+running:
+```
+cd /path/to/your/modpack/directory
+chmod u+x install*
+```
+Now you can run the binary either by double clicking it, or in the CLI.
+
 ## Usage for authors
 
 The installer reads modlists from all files with the `.modlist` extension in
