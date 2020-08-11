@@ -3,10 +3,9 @@ An easy to use modlist installer for Minecraft Java Edition.
 ## Usage for users
 
 Note: The dynamically linked (small file size) binaries depend on the .NET Core
-Runtime 3.1 (for macOS and Linux), which you can download [here](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+Runtime 3.1, which you can download [here](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 (3rd section in the right hand column).
-Windows binaries depend on the [.NET Framework 4.8 runtime](https://dotnet.microsoft.com/download/dotnet-framework/thank-you/net48-web-installer)
-(which you should already have installed).  If you want to just download an
+If you want to just download an
 executable and go, statically linked binaries are provided (the ones with
 larger file sizes).
 
