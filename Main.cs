@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace mcmli
 {
@@ -12,20 +11,14 @@ namespace mcmli
     {
         public static void Main(string[] args)
         {
-
-            string exeFileName = Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName);
-            string exeDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-
             // If we can, we want to run this code in the same directory as the
             // executable.
-            if (Directory.Exists(exeDir))
+            string exeDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+            try
             {
-                if (!Regex.Match(exeFileName, @"mono").Success)
-                {
-                    Directory.SetCurrentDirectory(exeDir);
-                }
+                Directory.SetCurrentDirectory(exeDir);
             }
-            else
+            catch
             {
                 Console.Error.Write("Warning: Could not cd to directory '{0}', the installer may not run correctly.", exeDir);
             }
@@ -45,10 +38,15 @@ namespace mcmli
                 // if there are no modlists
                 Console.Write("Please specify a remote: ");
                 string resp = Console.ReadLine();
-                if (resp != "") // If the user gives a URL, download it, otherwise do nothing
+                if (resp.StartsWith("http",true,null)) // If the user gives a URL, download it, otherwise do nothing
                 {
                     WebClient client = new WebClient();
-                    client.DownloadFile(resp, remotesList);
+                    try { client.DownloadFile(resp, remotesList); }
+                    catch
+                    {
+                      Console.Error.WriteLine($"{resp} is not a valid URL.");
+                      ExitHandler(2);
+                    }
 
                     FetchRemoteList(remotesList);
                 }
