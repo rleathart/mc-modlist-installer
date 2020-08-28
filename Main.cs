@@ -1,9 +1,5 @@
 using System;
 using System.IO;
-using System.Diagnostics;
-using System.Net;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace mcmli
 {
@@ -11,50 +7,44 @@ namespace mcmli
     {
         public static void Main(string[] args)
         {
+            if (exeDir.Length == 0) exeDir = ".";
+
+            // Directory to execute in can be passed as first argument.
+            if (args.Length != 0 && !String.IsNullOrWhiteSpace(args[0]))
+                exeDir = args[0];
             // If we can, we want to run this code in the same directory as the
             // executable.
-            string exeDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
             try
-            {
-                Directory.SetCurrentDirectory(exeDir);
-            }
+                { Directory.SetCurrentDirectory(exeDir); }
             catch
+                { Console.Error.Write($"Warning: Could not cd to directory '{exeDir}', the installer may not run correctly."); }
+
+            CurrentFS = GetFS(exeDir);
+
+            // Set and create config directory.
+            if (isWindows)
+                ConfigDir = new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"mcmli","config"));
+            if (isOSX || isLinux)
+                ConfigDir = new DirectoryInfo(Path.Combine(HomeDir.FullName,".config","mcmli"));
+
+            try { Directory.CreateDirectory(ConfigDir.FullName); }
+            catch (Exception e)
             {
-                Console.Error.Write("Warning: Could not cd to directory '{0}', the installer may not run correctly.", exeDir);
+                Console.Error.WriteLine($"Error: Unable to create config directory '{ConfigDir.FullName}'\n"
+                        + $"Exception: {e.Message}");
             }
 
-            // List of files to be fetched (say, a modlist) stored in '.install.remote'
-            string remotesList = ".install.remote";
-            if (File.Exists(remotesList)) FetchRemoteList(remotesList);
-
-            // List of all files matching *.modlist in base directory, sorted by name
-            List<string> modlists = new List<string>(Directory.EnumerateFiles(".", "*.modlist")
-                .OrderBy(f => f));
-            if (!modlists.Any())
+            if (SetCacheLocation() != 0)
             {
-                Console.Error.WriteLine("No modlists found.");
-
-                // Ask user for remote URL (holding the raw content for a .install.remote)
-                // if there are no modlists
-                Console.Write("Please specify a remote: ");
-                string resp = Console.ReadLine();
-                if (resp.StartsWith("http",true,null)) // If the user gives a URL, download it, otherwise do nothing
-                {
-                    WebClient client = new WebClient();
-                    try { client.DownloadFile(resp, remotesList); }
-                    catch
-                    {
-                      Console.Error.WriteLine($"{resp} is not a valid URL.");
-                      ExitHandler(2);
-                    }
-
-                    FetchRemoteList(remotesList);
-                }
+                Console.Error.WriteLine("Failed to set a cache location.");
+                ExitHandler(retVal: 3);
             }
-            // Regenerate modlists list, files might have changed since fetching
-            // remotesList
-            modlists = new List<string>(Directory.EnumerateFiles(".", "*.modlist")
-                .OrderBy(f => f));
+
+            Console.WriteLine($"Current cache is: {ModCache}");
+
+            GetModlists(); // List of all files matching *.modlist in base directory, sorted by name
+            FetchRemoteList();
+            GetModlists(); // Regenerate modlists list, files might have changed since fetching remotesList
 
             foreach (string list in modlists)
             {

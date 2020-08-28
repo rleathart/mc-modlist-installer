@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Linq;
 
 namespace mcmli
 {
@@ -16,10 +15,8 @@ namespace mcmli
              * URLs will be skipped if already downloaded by default but this can be
              * overridden by the alwaysFetch argument.
              */
-            if (Regex.Match(line, @"^[\s]*$").Success) return; // Skip empty lines
+            if (String.IsNullOrWhiteSpace(line)) return; // Skip empty lines
 
-            // Do any files match *server*?
-            bool isServer = Directory.EnumerateFiles(".", "*server*").Any();
 
             //  Ignore comments in URLs only if they are preceeded by whitespace,
             //  that is, not part of the URL.
@@ -46,6 +43,12 @@ namespace mcmli
                     Console.WriteLine($"Removing server only mod: {filename}");
                     File.Delete(Path.Combine(dir, filename));
                 }
+                return;
+            }
+
+            if (useCache && !url.EndsWith(".cfg",true,null) && !url.EndsWith(".modlist",true,null))
+            {
+                GetFileFromCache(url, dir, alwaysFetch);
                 return;
             }
 
