@@ -2,12 +2,7 @@ An easy to use modlist installer for Minecraft Java Edition.
 
 ## Usage for users
 
-Note: The dynamically linked (small file size) binaries depend on the .NET Core
-Runtime 3.1, which you can download [here](https://dotnet.microsoft.com/download/dotnet-core/3.1)
-(3rd section in the right hand column).
-If you want to just download an
-executable and go, statically linked binaries are provided (the ones with
-larger file sizes).
+This is a GO version of the master branch that exists in order to support FreeBSD
 
 Usage is as simple as downloading the [latest release](https://github.com/rleathart/mcmli/releases)
 for your operating system to a modpack directory and then running the executable.
