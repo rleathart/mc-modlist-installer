@@ -17,7 +17,7 @@ namespace mcmli
             try
                 { Directory.SetCurrentDirectory(exeDir); }
             catch
-                { Console.Error.Write($"Warning: Could not cd to directory '{exeDir}', the installer may not run correctly."); }
+                { Console.Error.WriteLine($"Warning: Could not cd to directory '{exeDir}', the installer may not run correctly."); }
 
             CurrentFS = GetFS(exeDir);
 
