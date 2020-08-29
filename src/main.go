@@ -7,25 +7,27 @@ import (
 	"runtime"
 )
 
-var exeDir string = getExecutingDirectory()
+var (
+	exeDir string = getExecutingDirectory()
 
-var isWindows bool = runtime.GOOS == "windows"
-var isLinux bool = runtime.GOOS == "linux"
-var isOSX bool = runtime.GOOS == "darwin"
-var isFreeBSD bool = runtime.GOOS == "freebsd"
+	isWindows bool = runtime.GOOS == "windows"
+	isLinux   bool = runtime.GOOS == "linux"
+	isOSX     bool = runtime.GOOS == "darwin"
+	isFreeBSD bool = runtime.GOOS == "freebsd"
 
-var remotesList string = ".install.remote"
-var isServer bool
+	remotesList string = ".install.remote"
+	isServer    bool
 
-var modlists []string
-var modDirs []string
+	modlists []string
+	modDirs  []string
 
-var homeDir string = getHomeDirectory()
-var configDir string
-var modCache string
+	homeDir   string = getHomeDirectory()
+	configDir string
+	modCache  string
 
-var alwaysFetch bool
-var useCache bool = true
+	alwaysFetch bool
+	useCache    bool = true
+)
 
 func main() {
 	if len(os.Args) > 1 {
