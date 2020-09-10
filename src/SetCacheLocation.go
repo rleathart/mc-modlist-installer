@@ -23,15 +23,15 @@ func SetCacheLocation() {
 }
 
 func getHomeDirectory() string {
-	var home string
-	if isWindows {
-		home = filepath.Join(os.Getenv("HOMEDRIVE"), os.Getenv("HOMEPATH"))
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
-		}
+	home, err := os.UserHomeDir()
+	if err == nil {
 		return home
 	}
 
-	home = os.Getenv("HOME")
+	if isWindows {
+		home = filepath.Join(os.Getenv("HOMEDRIVE"), os.Getenv("HOMEPATH"))
+		return home
+	}
+
 	return home
 }
