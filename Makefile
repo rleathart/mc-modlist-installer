@@ -21,4 +21,4 @@ release:
 	rm release/mcmli.exe
 
 todo:
-	@find . -type f -not -path '*bin*' -not -path '*obj*' -not -name 'Makefile' -exec grep -Ii 'TODO' {} \+
+	@find . -type f -name '*.go' -exec grep -Ii 'TODO' {} \+
