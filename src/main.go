@@ -15,8 +15,7 @@ var (
 	isOSX     bool = runtime.GOOS == "darwin"
 	isFreeBSD bool = runtime.GOOS == "freebsd"
 
-	remotesList string = ".install.remote"
-	isServer    bool
+	isServer bool
 
 	modlists []string
 	modDirs  []string
@@ -27,6 +26,9 @@ var (
 
 	alwaysFetch bool
 	useCache    bool = true
+
+	updating   bool = false
+	hasUpdated bool = false
 )
 
 func main() {
@@ -45,8 +47,23 @@ func main() {
 
 	SetCacheLocation()
 
+	// Check if there are any modlists
 	modlists, _ = filepath.Glob("*.modlist")
-	FetchRemoteList()
+	// If not, prompt the user for a URL to a modlist
+	if len(modlists) == 0 {
+		fmt.Println("No modlists found.")
+		var remoteURL string
+		for {
+			remoteURL = GetUserInput("Please specify a modlist URL: ")
+			if urlIsReachable(remoteURL) {
+				break
+			} else {
+				fmt.Println("Invalid URL!")
+			}
+		}
+		DownloadFile(remoteURL, ".")
+	}
+	// Regenerate list of modlists since it's changed since the user downloaded one
 	modlists, _ = filepath.Glob("*.modlist")
 
 	for _, modlist := range modlists {

@@ -56,6 +56,16 @@ func ResolveModlistAlways(Modlist string, always bool) {
 				DestDir = ExtractFromDelims(Line, "[]")[0]
 				alwaysFetch = alwaysFetchDefault
 				clientMod = -1
+
+				updating = false
+
+				if !hasUpdated {
+					hasUpdated = true
+
+					ResolveModlistAlways(Modlist, always)
+					hasUpdated = false
+					return
+				}
 			}
 
 			// Check for client/server only and alwaysFetch
@@ -68,6 +78,11 @@ func ResolveModlistAlways(Modlist string, always bool) {
 				}
 				if strings.ToLower(cs) == "always-fetch" {
 					alwaysFetch = true
+				}
+				if strings.ToLower(cs) == "update" {
+					alwaysFetch = true
+					clientMod = -1
+					updating = true
 				}
 			}
 			continue
@@ -96,6 +111,16 @@ func ResolveModlistAlways(Modlist string, always bool) {
 		}
 
 		os.MkdirAll(DestDir, 0755)
+
+		if updating {
+			if hasUpdated {
+				continue
+			} else {
+				fmt.Println("Updating ...")
+				DownloadFile(Line, DestDir)
+				continue
+			}
+		}
 
 		if !ContainsStr(modDirs, DestDir) && DestDir != "." && DestDir != "config" {
 			modDirs = append(modDirs, DestDir)
