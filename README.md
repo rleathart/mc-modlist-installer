@@ -1,28 +1,27 @@
-An easy to use modlist installer for Minecraft Java Edition.
+An easy to use modlist installer for Minecraft Java Edition. Think of this as an
+open source alternative to the Twitch Launcher.
 
 ## Usage for users
 
-This is a GO version of the master branch that exists in order to support FreeBSD
-
 Usage is as simple as downloading the [latest release](https://github.com/rleathart/mcmli/releases)
 for your operating system to a modpack directory and then running the executable.
-The installer will ask you to specify a remote: just copy and paste a link
-to a `modpack.remote` file.
-For reference, after running the installer your directory structure will look like:
+The installer will ask you to specify a modlist URL: just copy and paste a link
+to a modlist.
+For reference, after running the installer your directory structure will look
+something like:
 ```
 ./
-├── .install.remote
 ├── config/
 ├── main.modlist
-├── install.exe
+├── mcmli.exe
 └── mods/
 ```
 
-On macOS and Linux, you will have to set execute permissions for the file before
+On macOS and Linux, you may have to set execute permissions for the file before
 running:
 ```
 cd /path/to/your/modpack/directory
-chmod u+x install*
+chmod u+x mcmli
 ```
 Now you can run the binary either by double clicking it, or in the CLI.
 
@@ -36,6 +35,11 @@ called something like `main.modlist` or `<modpack-name>.modlist`.
 
 Perhaps the easiest way to understand the modlist format is to see an example:
 ```
+<Update>
+# Modlists can self update by using <Update> as the first
+# control directive.
+https://url/to/this/modlist
+
 [mods]
 # This line is a comment and will be ignored.
 https://somesite/commonmod.jar # Comments after URLs must be preceeded by whitespace.
@@ -53,6 +57,8 @@ control directives. Text inside `[]` brackets specifies the directory (relative
 to the executable) in which to download the following URLs. Text inside `<>`
 brackets specify options for the current 'context' (until the next set of `[]`
 brackets). Valid options are:
+-  `<Update>` Always download these files to the current directory and then
+-  resolve the modlist as usual.
 -  `<Always-Fetch>` Always download these files regardless of whether or not
 they are present already.
 -  `<Smart-Fetch>` Only download these files if they do not exist (default behaviour).
