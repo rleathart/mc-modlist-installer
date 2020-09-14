@@ -58,7 +58,7 @@ to the executable) in which to download the following URLs. Text inside `<>`
 brackets specify options for the current 'context' (until the next set of `[]`
 brackets). Valid options are:
 -  `<Update>` Always download these files to the current directory and then
--  resolve the modlist as usual.
+   resolve the modlist as usual.
 -  `<Always-Fetch>` Always download these files regardless of whether or not
 they are present already.
 -  `<Smart-Fetch>` Only download these files if they do not exist (default behaviour).
