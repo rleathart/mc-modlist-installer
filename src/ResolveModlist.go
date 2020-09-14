@@ -76,8 +76,14 @@ func ResolveModlistAlways(Modlist string, always bool) {
 				if strings.ToLower(cs) == "client-only" {
 					clientMod = 1
 				}
+				if strings.ToLower(cs) == "common" {
+					clientMod = -1
+				}
 				if strings.ToLower(cs) == "always-fetch" {
 					alwaysFetch = true
+				}
+				if strings.ToLower(cs) == "smart-fetch" {
+					alwaysFetch = false
 				}
 				if strings.ToLower(cs) == "update" {
 					alwaysFetch = true
