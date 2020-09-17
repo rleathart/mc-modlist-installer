@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +27,11 @@ func DownloadFileSilent(URL, DestDir string) {
 
 // DownloadFileToPath comment
 func DownloadFileToPath(URL, DestDir, Filename string) error {
+
+	if !urlIsReachable(URL) {
+		return errors.New("URL is unreachable.")
+	}
+
 	// Get the data
 	resp, err := http.Get(URL)
 	if err != nil {
