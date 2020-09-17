@@ -15,6 +15,10 @@ import (
 // with an automatic filename.
 func DownloadFile(URL string, DestDir string) {
 	Filename, _ := url.PathUnescape(path.Base(URL))
+	if !urlIsReachable(URL) {
+		fmt.Printf("URL: %s is unreachable!\n",URL)
+		return
+	}
 	fmt.Printf("[%s] Downloading %s ...\n", DestDir, Filename)
 	DownloadFileToPath(URL, DestDir, Filename)
 }
@@ -22,6 +26,10 @@ func DownloadFile(URL string, DestDir string) {
 // DownloadFileSilent comment
 func DownloadFileSilent(URL, DestDir string) {
 	Filename, _ := url.PathUnescape(path.Base(URL))
+	if !urlIsReachable(URL) {
+		fmt.Printf("URL: %s is unreachable!\n",URL)
+		return
+	}
 	DownloadFileToPath(URL, DestDir, Filename)
 }
 
@@ -29,6 +37,7 @@ func DownloadFileSilent(URL, DestDir string) {
 func DownloadFileToPath(URL, DestDir, Filename string) error {
 
 	if !urlIsReachable(URL) {
+		fmt.Printf("URL: %s is unreachable!\n",URL)
 		return errors.New("URL is unreachable.")
 	}
 

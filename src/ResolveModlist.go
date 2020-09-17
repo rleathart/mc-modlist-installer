@@ -242,6 +242,10 @@ func ResolveModlistAlways(Modlist string, always bool) {
 			if PathExists(filepath.Join(modCache, Filename)) {
 				GetFileFromCache(Filename, DestDir)
 			} else {
+				if !urlIsReachable(URL) {
+					fmt.Printf("URL: %s is unreachable!\n", URL)
+					continue
+				}
 				fmt.Printf("[%s] Downloading %s ...\n", DestDir, Filename)
 				DownloadFileSilent(URL, modCache)
 				GetFileFromCache(Filename, DestDir)
