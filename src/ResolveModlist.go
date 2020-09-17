@@ -17,7 +17,8 @@ func ResolveModlist(Modlist string) {
 	ResolveModlistAlways(Modlist, false)
 }
 
-// ResolveModlistAlways comment
+// ResolveModlistAlways Resolve a modlist, optionally downloading everything
+// regardless of whether it exists already.
 func ResolveModlistAlways(Modlist string, always bool) {
 
 	var DestDir string = "."
