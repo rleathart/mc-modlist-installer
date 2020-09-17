@@ -48,6 +48,13 @@ https://somesite/client-only-mod.jar
 <Server-Only>
 https://somesite/server-only-mod.jar
 
+# Here we ask the user to download a file called 'OptiFine_1.12.2_HD_U_F5.jar'
+# from the URL 'https://optifine.net/adloadx?f=OptiFine_1.12.2_HD_U_F5.jar'.
+# Once they download it, the mod will be moved to the cache and then linked to the
+# modpack directory.
+[mods] <User-Download>
+https://optifine.net/adloadx?f=OptiFine_1.12.2_HD_U_F5.jar {OptiFine_1.12.2_HD_U_F5.jar}
+
 [config] <Always-Fetch>
 https://somesite/commonconfig.cfg
 ```
@@ -65,3 +72,5 @@ they are present already.
 -  `<Server-Only>` Only download these files if the current instance is a server.
 -  `<Client-Only>` Only download these files if the current instance is a client.
 -  `<Common>` Download these files for both servers and clients (default).
+-  `User-Download` Prompt the user to download a file from the URL given. See above
+   for an example.
