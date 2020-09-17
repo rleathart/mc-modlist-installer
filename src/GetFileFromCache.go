@@ -2,16 +2,12 @@ package main
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 )
 
-// GetFileFromCache comment
-func GetFileFromCache(URL, DestDir string) {
-	Filename, _ := url.PathUnescape(path.Base(URL))
-
+// GetFileFromCache Link file from modCache to DestDir if it exists in the cache
+func GetFileFromCache(Filename, DestDir string) {
 	var LocalFile string = filepath.Join(exeDir, DestDir, Filename)
 	var CachedFile string = filepath.Join(modCache, Filename)
 
@@ -24,9 +20,5 @@ func GetFileFromCache(URL, DestDir string) {
 		fmt.Printf("[%s] Linking %s ...\n", DestDir, Filename)
 		err := os.Symlink(CachedFile, LocalFile)
 		ErrHandler(err)
-	} else {
-		fmt.Printf("[%s] Downloading %s ...\n", DestDir, Filename)
-		DownloadFileSilent(URL, modCache)
-		GetFileFromCache(URL, DestDir)
 	}
 }
