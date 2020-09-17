@@ -21,13 +21,21 @@ func ResolveModlist(Modlist string) {
 // regardless of whether it exists already.
 func ResolveModlistAlways(Modlist string, always bool) {
 
+	// Download to the current directory by default
 	var DestDir string = "."
+	// Reset alwaysFetch to this value for every directory specification
 	var alwaysFetchDefault bool = always
 	alwaysFetch = alwaysFetchDefault
+	// Is this a common mod (-1), server only (0) or client only (1)
 	var clientMod int = -1
+	// Does the user need to download something manually?
+	var userDownload bool = false
 
+	// Regex that defines comments
 	commentRegex := regexp.MustCompile(`#.*`)
+	// Regex that defines comments in URLs
 	commentRegexURL := regexp.MustCompile(` #.*`)
+	// Regex that identifies a control seqeunce in the modlist.
 	CSRegex := regexp.MustCompile(`(\[[^]]+\]|<[^>]+>)`)
 
 	file, err := os.Open(Modlist)
