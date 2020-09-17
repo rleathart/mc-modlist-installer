@@ -14,6 +14,9 @@ func ExtractFromDelims(Text, Delims string) []string {
 	if Delims == "<>" {
 		re = regexp.MustCompile(`<(.*?)>`)
 	}
+	if Delims == "{}" {
+		re = regexp.MustCompile(`\{(.*?)\}`)
+	}
 
 	var Matches []string
 
