@@ -110,30 +110,27 @@ func ResolveModlistAlways(Modlist string, always bool) {
 			}
 			// Get control sequences from Line
 			for _, cs := range ExtractFromDelims(Line, "<>") {
-				if strings.ToLower(cs) == "server-only" {
+				switch strings.ToLower(cs) {
+				case "server-only":
 					clientMod = 0
-				}
-				if strings.ToLower(cs) == "client-only" {
+				case "client-only":
 					clientMod = 1
-				}
-				if strings.ToLower(cs) == "common" {
+				case "common":
 					clientMod = -1
-				}
-				if strings.ToLower(cs) == "always-fetch" {
+				case "always-fetch":
 					alwaysFetch = true
-				}
-				if strings.ToLower(cs) == "smart-fetch" {
+				case "smart-fetch":
 					alwaysFetch = false
-				}
-				if strings.ToLower(cs) == "update" {
+				case "update":
 					/* URLs should always be downloaded when updating. They should also be
 					updated for both client and server */
 					alwaysFetch = true
 					clientMod = -1
 					updating = true
-				}
-				if strings.ToLower(cs) == "user-download" {
+				case "user-download":
 					userDownload = true
+				default:
+					fmt.Printf("Unknown control sequence: %s\n", strings.ToLower(cs))
 				}
 			}
 			// That's all we need to do for anything that's not a URL, so just move on
