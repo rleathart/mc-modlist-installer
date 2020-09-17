@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net/url"
@@ -10,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // ResolveModlist comment
@@ -33,8 +33,12 @@ func ResolveModlistAlways(Modlist string, always bool) {
 
 	// Regex that defines comments
 	commentRegex := regexp.MustCompile(`#.*`)
-	// Regex that defines comments in URLs
-	commentRegexURL := regexp.MustCompile(` #.*`)
+	// Regex that defines comments in URLs. Note that they must be preceded by
+	// whitespace since there's a chance that a URL contains a '#'
+	commentRegexURL := regexp.MustCompile(`[\s]+#.*`)
+	/* This matches the first whitespace character and any characters
+	following it. This works since whitespace is illegal in URLs */
+	illegalRegexURL := regexp.MustCompile(`[\s].*`)
 	// Regex that identifies a control seqeunce in the modlist.
 	CSRegex := regexp.MustCompile(`(\[[^]]+\]|<[^>]+>)`)
 
@@ -44,30 +48,50 @@ func ResolveModlistAlways(Modlist string, always bool) {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		var Line string = strings.TrimSpace(scanner.Text())
-		var isURL bool = strings.HasPrefix(Line, "http")
-		if len(Line) == 0 { // Skip empty lines
+	// []string slice containing the plaintext lines from Modlist file.
+	LinesInModlist, err := ReadLines(Modlist)
+	if err != nil {
+		ErrHandler(err)
+	}
+
+	for _, Line := range LinesInModlist {
+		// We'll use these later, useful for distinguishing the line from a URL or filename.
+		var URL, Filename string
+		// Get rid of leading and trailing whitespace
+		Line = strings.TrimSpace(Line)
+		// Does the line start with "http"?
+		isURL := strings.HasPrefix(Line, "http")
+
+		// Replace comments with the empty string.
+		if isURL {
+			Line = commentRegexURL.ReplaceAllString(Line, "")
+			URL = illegalRegexURL.ReplaceAllString(Line, "")
+		} else {
+			Line = commentRegex.ReplaceAllString(Line, "")
+		}
+
+		// Is this line a control sequence?
+		isCS := CSRegex.MatchString(Line)
+
+		// If line is empty after processing comments or it's not a URL or control
+		// sequence, go to the next line.
+		if len(Line) == 0 || (!isURL && !isCS) {
 			continue
 		}
 
 		if !isURL {
-			Line = commentRegex.ReplaceAllString(Line, "") // ignore comments
-			isCS := CSRegex.MatchString(Line)
-
-			if !isCS { // If this line doesn't look like a control sequence, skip it
-				continue
-			}
-
-			isDirectoryCS := len(ExtractFromDelims(Line, "[]")) > 0
-			if isDirectoryCS { // Do this for every directory CS
+			// Is this line a directory control sequence?
+			isDirectoryCS := isCS && len(ExtractFromDelims(Line, "[]")) > 0
+			// Do this for every directory CS
+			if isDirectoryCS {
+				// Set the destination directory to the text inside the first pair of
+				// square brackets.
 				DestDir = ExtractFromDelims(Line, "[]")[0]
 				// Reset alwaysFetch to its default value
 				alwaysFetch = alwaysFetchDefault
 				// Set mods to be common to both server and client by default
 				clientMod = -1
-
+				// Unless it's specified later by a control sequence, we're not updating
 				updating = false
 
 				if !hasUpdated {
@@ -82,8 +106,7 @@ func ResolveModlistAlways(Modlist string, always bool) {
 					return
 				}
 			}
-
-			// Check for client/server only and alwaysFetch
+			// Get control sequences from Line
 			for _, cs := range ExtractFromDelims(Line, "<>") {
 				if strings.ToLower(cs) == "server-only" {
 					clientMod = 0
@@ -107,17 +130,20 @@ func ResolveModlistAlways(Modlist string, always bool) {
 					clientMod = -1
 					updating = true
 				}
+				if strings.ToLower(cs) == "user-download" {
+					userDownload = true
+				}
 			}
 			// That's all we need to do for anything that's not a URL, so just move on
 			// to the next line.
 			continue
 		}
 
-		Line = commentRegexURL.ReplaceAllString(Line, "")
-
-		Filename, err := url.PathUnescape(path.Base(Line))
+		/* If this line *is* a URL */
+		// Get the base path from the URL, that is, the filename.
+		Filename, err = url.PathUnescape(path.Base(URL))
 		if err != nil {
-			log.Fatal(err)
+			ErrHandler(err)
 		}
 
 		// If this file is client only and the current instance is a server
@@ -141,45 +167,104 @@ func ResolveModlistAlways(Modlist string, always bool) {
 
 		// Create the destination directory.
 		os.MkdirAll(DestDir, 0755)
+		// Add DestDir to mods dirs if it's not already there.
+		// Note that we don't want to add directories like '.' and 'config'
+		if DestDir != "." && DestDir != "config" && !ContainsStr(modDirs, DestDir) {
+			modDirs = append(modDirs, DestDir)
+		}
 
+		// If this is a file that the user must download manually.
+		if userDownload {
+			/* We use this regex to remove anyhing before the first group of whitespace
+			this is to avoid the scenario where the URL contains a pair of curly braces */
+			re := regexp.MustCompile(`[^\s]*[\s]+`)
+			/* Set Filename to the text inside the first pair of curly braces.
+			e.g. For 'https://somehost/somedir/filetodownload.jar {SomeMod.jar}',
+			Filename is "SomeMod.jar". */
+			Filename = ExtractFromDelims(re.ReplaceAllString(Line, ""), "{}")[0]
+
+			// TODO: Here we are not supporting the behaviour of operating without a
+			// cache.
+			if !PathExists(filepath.Join(modCache, Filename)) {
+				fmt.Printf("Please download %s from the URL below and place it in %s\n",
+					Filename, DownloadsDirectory)
+				fmt.Println(URL)
+
+				// This string will store the path to the downloaded file.
+				var Download string = filepath.Join(DownloadsDirectory, Filename)
+				var DownloadFileSize int64
+				/* Loop to check if the user has downloaded the file. Once they have,
+				move it to the cache. */
+				for {
+					// Do nothing for 500ms, we don't want to be pointlessly wasting CPU cycles.
+					time.Sleep(500 * time.Millisecond)
+
+					FileInfo, err := os.Stat(Download)
+					if err != nil {
+						// Try again if the file doesn't exist
+						continue
+					}
+
+					DownloadFileSize = FileInfo.Size()
+					// Sleep for 250ms to see if the file size has changed
+					time.Sleep(250 * time.Millisecond)
+					// Note that we don't need to handle err here since we already do that above.
+					FileInfo, _ = os.Stat(Download)
+
+					/* If the file size has changed since we checked 250ms ago or it's still
+					zero, continue since the file is probably still downloading. */
+					if DownloadFileSize != FileInfo.Size() || FileInfo.Size() == 0 {
+						continue
+					}
+
+					// Move the download to the cache.
+					os.Rename(Download, filepath.Join(modCache, Filename))
+					// Terminate loop
+					break
+				}
+			}
+		}
+
+		// If this line is part of the update block.
 		if updating {
 			if hasUpdated {
 				// Go to the next line if we've already updated
 				continue
 			} else {
-				fmt.Println("Updating ...")
-				DownloadFile(Line, DestDir)
+				// Otherwise, download the URL.
+				fmt.Printf("Updating %s ...\n", Filename)
+				DownloadFileSilent(URL, DestDir)
 				continue
 			}
 		}
 
-		if !ContainsStr(modDirs, DestDir) && DestDir != "." && DestDir != "config" {
-			modDirs = append(modDirs, DestDir)
+		// If we don't want to alwaysFetch this file
+		if !always && !alwaysFetch {
+			if PathExists(filepath.Join(modCache, Filename)) {
+				GetFileFromCache(Filename, DestDir)
+			} else {
+				fmt.Printf("[%s] Downloading %s ...\n", DestDir, Filename)
+				DownloadFileSilent(URL, modCache)
+				GetFileFromCache(Filename, DestDir)
+			}
 		}
 
-		if useCache && !always && !alwaysFetch {
-			GetFileFromCache(Line, DestDir)
-			continue
+		if alwaysFetch {
+			DownloadFile(URL, DestDir)
 		}
-
-		if alwaysFetch || !PathExists(filepath.Join(DestDir, Filename)) {
-			DownloadFile(Line, DestDir)
-		} else {
-			fmt.Printf("[%s] Skipping existing file %s\n", DestDir, Filename)
-		}
-
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
 	}
 
 	// Slice containing all mods
 	var mods []string
-	for _, i := range modDirs {
-		modfiles, _ := GetFilesInDirectory(i)
-		for j, k := range modfiles {
-			modfiles[j] = filepath.Join(i, k)
+	// For each directory in modDirs slice, that is, any directory that we have
+	// put mods in.
+	for _, dir := range modDirs {
+		// Get all the files in said directory
+		modfiles, _ := GetFilesInDirectory(dir)
+		// For each of those mods, keep a record of their relative path
+		for i, mod := range modfiles {
+			// e.g. modfiles[i] = "mods/SomeMod.jar"
+			modfiles[i] = filepath.Join(dir, mod)
 		}
 		// Append this list of mods to the main slice.
 		mods = append(mods, modfiles...)
@@ -197,7 +282,7 @@ func ResolveModlistAlways(Modlist string, always bool) {
 		for _, modlist := range modlists {
 			modlistLines, _ := ReadLines(modlist)
 			for _, line := range modlistLines {
-				if strings.HasSuffix(line, encodedMod) {
+				if strings.Contains(line, encodedMod) {
 					isInModlist = true
 					// No point doing any further checking for this mod
 					goto NEXTMOD
