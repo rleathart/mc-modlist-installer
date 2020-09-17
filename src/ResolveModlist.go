@@ -63,16 +63,22 @@ func ResolveModlistAlways(Modlist string, always bool) {
 			isDirectoryCS := len(ExtractFromDelims(Line, "[]")) > 0
 			if isDirectoryCS { // Do this for every directory CS
 				DestDir = ExtractFromDelims(Line, "[]")[0]
+				// Reset alwaysFetch to its default value
 				alwaysFetch = alwaysFetchDefault
+				// Set mods to be common to both server and client by default
 				clientMod = -1
 
 				updating = false
 
 				if !hasUpdated {
+					// We'll definitely have updated by the time we get to a directory CS.
 					hasUpdated = true
-
+					// Now we wan't to recall this function with hasUpdated = true
 					ResolveModlistAlways(Modlist, always)
+					// Reset hasUpdated in case there are other modlists that need to update
+					// themselves.
 					hasUpdated = false
+					// We're all done with this modlist after the recursion above, so just return
 					return
 				}
 			}
@@ -95,11 +101,15 @@ func ResolveModlistAlways(Modlist string, always bool) {
 					alwaysFetch = false
 				}
 				if strings.ToLower(cs) == "update" {
+					/* URLs should always be downloaded when updating. They should also be
+					updated for both client and server */
 					alwaysFetch = true
 					clientMod = -1
 					updating = true
 				}
 			}
+			// That's all we need to do for anything that's not a URL, so just move on
+			// to the next line.
 			continue
 		}
 
@@ -110,13 +120,17 @@ func ResolveModlistAlways(Modlist string, always bool) {
 			log.Fatal(err)
 		}
 
+		// If this file is client only and the current instance is a server
 		if clientMod == 1 && isServer {
+			// Remove the file if it exists
 			if PathExists(filepath.Join(DestDir, Filename)) {
 				fmt.Printf("[%s] Removing client only file: %s\n", DestDir, Filename)
 				os.Remove(filepath.Join(DestDir, Filename))
 			}
+			// Go to the next line in LinesInModlist
 			continue
 		}
+		// As above
 		if clientMod == 0 && !isServer {
 			if PathExists(filepath.Join(DestDir, Filename)) {
 				fmt.Printf("[%s] Removing server only file: %s\n", DestDir, Filename)
@@ -125,10 +139,12 @@ func ResolveModlistAlways(Modlist string, always bool) {
 			continue
 		}
 
+		// Create the destination directory.
 		os.MkdirAll(DestDir, 0755)
 
 		if updating {
 			if hasUpdated {
+				// Go to the next line if we've already updated
 				continue
 			} else {
 				fmt.Println("Updating ...")
@@ -158,29 +174,38 @@ func ResolveModlistAlways(Modlist string, always bool) {
 		log.Fatal(err)
 	}
 
+	// Slice containing all mods
 	var mods []string
 	for _, i := range modDirs {
 		modfiles, _ := GetFilesInDirectory(i)
 		for j, k := range modfiles {
 			modfiles[j] = filepath.Join(i, k)
 		}
+		// Append this list of mods to the main slice.
 		mods = append(mods, modfiles...)
 	}
 
 	for _, mod := range mods {
 		var isInModlist bool = false
+		// The directory that the mod is in
 		dir := filepath.Dir(mod)
 		encodedMod := url.PathEscape(filepath.Base(mod))
+		// We want to decode some strings because of inconsistencies.
 		encodedMod = strings.Replace(encodedMod, "%27", "'", -1)
+
+		// For each modlist, check if any line in it contains the escaped mod filename
 		for _, modlist := range modlists {
 			modlistLines, _ := ReadLines(modlist)
 			for _, line := range modlistLines {
 				if strings.HasSuffix(line, encodedMod) {
 					isInModlist = true
-					goto NEXTMOD // No point doing any further checking for this mod
+					// No point doing any further checking for this mod
+					goto NEXTMOD
 				}
 			}
 		}
+		// If a file is found locally, but it's not in a modlist: prompt the user to
+		// remove it.
 		if !isInModlist {
 			fmt.Printf("%s found in '%s' directory but not in any modlist.\n", encodedMod, dir)
 			resp := GetUserInput("Do you want to remove it? [Y/n]: ")
