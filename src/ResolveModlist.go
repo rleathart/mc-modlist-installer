@@ -93,6 +93,8 @@ func ResolveModlistAlways(Modlist string, always bool) {
 				clientMod = -1
 				// Unless it's specified later by a control sequence, we're not updating
 				updating = false
+				// Reset userDownload
+				userDownload = false
 
 				if !hasUpdated {
 					// We'll definitely have updated by the time we get to a directory CS.
