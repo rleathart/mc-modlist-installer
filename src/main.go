@@ -20,9 +20,10 @@ var (
 	modlists []string
 	modDirs  []string
 
-	homeDir   string = getHomeDirectory()
-	configDir string
-	modCache  string
+	homeDir            string = getHomeDirectory()
+	configDir          string
+	modCache           string
+	DownloadsDirectory string = GetDownloadsDirectory()
 
 	alwaysFetch bool
 	useCache    bool = true
@@ -36,11 +37,13 @@ func main() {
 		exeDir, _ = filepath.Abs(os.Args[1])
 	}
 
+	// We want to execute this program in the same directory as the binary, or the
+	// user supplied first argument.
 	fmt.Printf("CWD is: %s\n", exeDir)
+	// cd to exeDir
 	err := os.Chdir(exeDir)
-	if err != nil {
-		ErrHandler(err)
-	}
+	// If we can't cd to exeDir, something must be wrong and we should exit
+	ErrHandler(err)
 
 	serverfiles, _ := filepath.Glob("*server*")
 	isServer = len(serverfiles) > 0
